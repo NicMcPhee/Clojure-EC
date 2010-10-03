@@ -23,3 +23,17 @@
    the first parent again."
   [first-parent second-parent j k]
   (masked-xo (choices-seq j k) first-parent second-parent))
+
+(defn masked-point-mutation
+  "Use the given mask to perform point mutation on a sequence. Where
+   elements of the mask are 1, the corresponding bit will be flipped (i.e.,
+   a 1 will be come a 0 and a 0 will become a 1); when the element is 0
+   it will remain unchanged."
+  [parent mask]
+  (map bit-xor mask parent))
+
+(defn point-mutation
+  "Randomly flip the bits in the given sequence with uniform probability."
+  [parent]
+  (let [random-bits (repeatedly #(rand-int 2))]
+    (masked-point-mutation parent random-bits)))

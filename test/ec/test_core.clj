@@ -13,3 +13,11 @@
     [0 0 0 0 0 0] [1 1 1 1 1 1] -3 4 [1 1 1 1 0 0]
     [0 0 0 0 0 0] [1 1 1 1 1 1] 2 12 [0 0 1 1 1 1]
     [0 0 0 0 0 0] [1 1 1 1 1 1] -2 43 [1 1 1 1 1 1]))
+
+(deftest masked-point-mutation-test
+  (are [parent mask expected]
+    (= (masked-point-mutation parent mask) expected)
+    [0 0 0 0 0 0] [0 1 1 0 0 1] [0 1 1 0 0 1]
+    [1 1 1 1 1 1] [0 1 1 0 0 1] [1 0 0 1 1 0]
+    [0 1 1 1 0 0] [1 0 1 0 1 1] [1 1 0 1 1 1]))
+    
