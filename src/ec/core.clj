@@ -32,8 +32,41 @@
   [parent mask]
   (map bit-xor mask parent))
 
+(defn random-bits
+  "Generate a sequence of random bits. If no argument is provided, an infinite
+   lazy sequence is generated. If a desired size is provided, then a sequence
+   having the specified number of bits is provided."
+  ([]
+    (repeatedly #(rand-int 2)))
+  ([num-bits]
+    (take num-bits (random-bits))))
+
 (defn point-mutation
   "Randomly flip the bits in the given sequence with uniform probability."
   [parent]
   (let [random-bits (repeatedly #(rand-int 2))]
     (masked-point-mutation parent random-bits)))
+
+(defn tournament-selection
+  "Generates a tournament with no duplication having the specified size and
+   returns the individual from that tournament with the largest fitness."
+  [population tournament-size]
+  (let
+    [candidates (take tournament-size (shuffle population))]
+    (apply max-key :fitness candidates)))
+
+(defn make-individual
+  "Create an individual having the specified number of randomly generated bits using 
+   the specified fitness function."
+  [num-bits fitness-function]
+  (let 
+    [random-bits (repeatedly num-bits #(rand-int 2))
+     fitness (fitness-function random-bits)]
+    {:bit-string random-bits
+     :fitness fitness}))
+
+(defn make-population
+  "Create a population of randomly created individuals having the specified number of bits
+   and using the given fitness function."
+  [num-individuals num-bits fitness-function]
+  (repeatedly num-individuals #(make-individual num-bits fitness-function)))

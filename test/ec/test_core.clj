@@ -20,4 +20,13 @@
     [0 0 0 0 0 0] [0 1 1 0 0 1] [0 1 1 0 0 1]
     [1 1 1 1 1 1] [0 1 1 0 0 1] [1 0 0 1 1 0]
     [0 1 1 1 0 0] [1 0 1 0 1 1] [1 1 0 1 1 1]))
-    
+
+(deftest population-creation-test
+  (let [pop-size 100
+        bit-length 20
+        counter (atom -1)
+        fitness-fn (fn [_] (swap! counter inc))
+        population (make-population pop-size bit-length fitness-fn)]
+    (is (= (count population) pop-size))
+    (is (apply = bit-length (map #(count (:bit-string %1)) population)))
+    (is (= (map :fitness population) (range pop-size)))))
