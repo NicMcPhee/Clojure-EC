@@ -1,29 +1,18 @@
 ;;; TO-DOs
 ;;; Look at parallelizing the creation of new generations so we can use multi-cores.
 
-(ns ec.core)
+(ns ec.core
+  (:use ec.primitives))
 
-(defn- choices-seq
-  "Generate a sequence of boolean values indicating whether a particular
-   element in a crossover event comes from the first or the second parent."
+(defn- choices-fn
+  "Return a fn for use in masked-xo that implements the selection logic
+described in the two-point-xo documentation."
   [j k]
-  (concat 
-    (repeat j true)
-    (repeat (- k (max 0 j)) false)
-    (repeat true)))
-
-(defn- masked-xo
-  "Use the given mask to perform crossover between two sequences. Where
-   elements of the mask are true, the corresponding item will come from
-   first-parent; when the element is false it will come from the second-parent."
-  [mask first-parent second-parent]
-  (loop [res [], mask mask, fp first-parent, sp second-parent]
-    (if (seq fp)
-      (recur (conj res (if (first mask) (first fp) (first sp)))
-        (rest mask)
-        (rest fp)
-        (rest sp))
-      res)))
+  (fn [n]
+    (cond
+      (< n j) true
+      (< n k) false
+      :else true)))
 
 (defn two-point-xo
   "Performs standard two point crossover on the given sequences.
@@ -32,58 +21,45 @@
    the first parent again."
   ([first-parent second-parent]
     (let [length (count first-parent)
-         first-point (rand-int length)
-         second-point (rand-int length)]
+          first-point (rand-int length)
+          second-point (rand-int length)]
       (two-point-xo first-parent second-parent first-point second-point)))
   ([first-parent second-parent j k]
-    (masked-xo (choices-seq j k) first-parent second-parent)))
-
-(defn masked-point-mutation
-  "Use the given mask to perform point mutation on a sequence. Where
-   elements of the mask are 1, the corresponding bit will be flipped (i.e.,
-   a 1 will be come a 0 and a 0 will become a 1); when the element is 0
-   it will remain unchanged."
-  [parent mask]
-  (loop [res [], parent parent, mask mask]
-    (if (seq parent)
-      (recur (conj res (bit-xor (first parent) (first mask)))
-        (rest parent)
-        (rest mask))
-      res)))
-
-(defn random-bits
-  "Generate a sequence of random bits. If no argument is provided, an infinite
-   lazy sequence is generated. If a desired size is provided, then a sequence
-   having the specified number of bits is provided."
-  ([]
-    (repeatedly #(rand-int 2)))
-  ([num-bits]
-    (take num-bits (random-bits))))
+    (masked-xo (choices-fn j k) first-parent second-parent)))
 
 (defn point-mutation
   "Randomly flip the bits in the given sequence with uniform probability."
   ([parent mutation-rate]
-   (let [random-bits (repeatedly #(if (< (rand) mutation-rate) 1 0))]
-    (masked-point-mutation parent random-bits)) )
+   (let [random-bits (fn [_] (< (rand) mutation-rate))]
+     (masked-point-mutation random-bits parent)))
   ([parent]
     (point-mutation parent (/ 1.0 (count parent)))))
+
+(defn two-point-xo-point-mutation
+  [first-parent second-parent]
+  (let [length (count first-parent)
+        j (rand-int length)
+        k (+ j (rand-int (- length j)))
+        choices (choices-fn j k)
+        mut-rate (/ 1.0 length)
+        rnd (fn [_] (< (rand) mut-rate))]
+    (masked-xo-point-mutation choices first-parent second-parent rnd)))
 
 (defn tournament-selection
   "Generates a tournament with no duplication having the specified size and
    returns the individual from that tournament with the largest fitness."
   [population tournament-size]
-  (let
-    [candidates (map population (repeatedly tournament-size #(rand-int (count population))))]
+  (let [rnd-fn #(rand-int (count population))
+        candidates (map population (repeatedly tournament-size rnd-fn))]
     (apply max-key :fitness candidates)))
 
 (defn make-individual
   "Create an individual having the specified number of randomly generated bits using 
    the specified fitness function."
   [num-bits fitness-function]
-  (let 
-    [random-bits (repeatedly num-bits #(rand-int 2))
-     fitness (fitness-function random-bits)]
-    {:bit-string (vec random-bits)
+  (let [random-bits (random-bit-string num-bits)
+        fitness (fitness-function random-bits)]
+    {:bit-string random-bits
      :fitness fitness}))
 
 (defn make-population
@@ -96,9 +72,8 @@
   [population fitness-function tournament-size]
   (let [first-parent (:bit-string (tournament-selection population tournament-size))
         second-parent (:bit-string (tournament-selection population tournament-size))
-        xo-result (two-point-xo first-parent second-parent)
-        mutation-result (point-mutation xo-result)
-        result {:bit-string (vec mutation-result) :fitness (fitness-function mutation-result)}]
+        mut-result (two-point-xo-point-mutation first-parent second-parent)
+        result {:bit-string mut-result :fitness (fitness-function mut-result)}]
     result))
 
 (defn next-generation
