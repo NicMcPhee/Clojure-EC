@@ -1,5 +1,4 @@
 ;;; TO-DOs
-;;; Improve performance of tournament-selection (which profiling shows really sucks).
 ;;; Look at parallelizing the creation of new generations so we can use multi-cores.
 
 (ns ec.core)
@@ -18,7 +17,13 @@
    elements of the mask are true, the corresponding item will come from
    first-parent; when the element is false it will come from the second-parent."
   [mask first-parent second-parent]
-  (map #(if %1 %2 %3) mask first-parent second-parent))
+  (loop [res [], mask mask, fp first-parent, sp second-parent]
+    (if (seq fp)
+      (recur (conj res (if (first mask) (first fp) (first sp)))
+        (rest mask)
+        (rest fp)
+        (rest sp))
+      res)))
 
 (defn two-point-xo
   "Performs standard two point crossover on the given sequences.
@@ -39,7 +44,12 @@
    a 1 will be come a 0 and a 0 will become a 1); when the element is 0
    it will remain unchanged."
   [parent mask]
-  (map bit-xor mask parent))
+  (loop [res [], parent parent, mask mask]
+    (if (seq parent)
+      (recur (conj res (bit-xor (first parent) (first mask)))
+        (rest parent)
+        (rest mask))
+      res)))
 
 (defn random-bits
   "Generate a sequence of random bits. If no argument is provided, an infinite
@@ -63,7 +73,7 @@
    returns the individual from that tournament with the largest fitness."
   [population tournament-size]
   (let
-    [candidates (take tournament-size (shuffle population))]
+    [candidates (map population (repeatedly tournament-size #(rand-int (count population))))]
     (apply max-key :fitness candidates)))
 
 (defn make-individual
@@ -80,7 +90,7 @@
   "Create a population of randomly created individuals having the specified number of bits
    and using the given fitness function."
   [num-individuals num-bits fitness-function]
-  (repeatedly num-individuals #(make-individual num-bits fitness-function)))
+  (vec (repeatedly num-individuals #(make-individual num-bits fitness-function))))
 
 (defn child
   [population fitness-function tournament-size]
@@ -93,7 +103,7 @@
 
 (defn next-generation
   [num-individuals fitness-function tournament-size population]
-  (map (fn [_] (child population fitness-function tournament-size)) (range num-individuals)))
+  (vec (map (fn [_] (child population fitness-function tournament-size)) (range num-individuals))))
 
 (defn count-ones
   [bit-string]
