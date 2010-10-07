@@ -45,13 +45,25 @@ described in the two-point-xo documentation."
         rnd (fn [_] (< (rand) mut-rate))]
     (masked-xo-point-mutation choices first-parent second-parent rnd)))
 
+(defn- distinct-elements
+  "Return a seq of n random distinct elements from v"
+  [v n]
+  (loop [mapping (transient {}), n n, picked (), size (count v)]
+    (if (zero? n)
+      picked
+      (let [i (rand-int size)
+            m #(mapping % %)
+            j (m i)
+            picked (cons (nth v j) picked)
+            mapping (assoc! mapping i (m (dec size)))
+            mapping (dissoc! mapping (dec size))]
+        (recur mapping (dec n) picked (dec size))))))
+
 (defn tournament-selection
   "Generates a tournament with no duplication having the specified size and
    returns the individual from that tournament with the largest fitness."
-  [population tournament-size]
-  (let [rnd-fn #(rand-int (count population))
-        candidates (map population (repeatedly tournament-size rnd-fn))]
-    (apply max-key :fitness candidates)))
+  [population size]
+  (apply max-key :fitness (distinct-elements population size)))
 
 (defn make-individual
   "Create an individual having the specified number of randomly generated bits using 
