@@ -40,7 +40,7 @@ be taken from first-parent, otherwise second-parent"
 (defn masked-point-mutation
   "Perform point mutation on parent.  mask is a fn that takes an index; if it
 returns true, the corresponding location has a bit flipped"
-  [mask ^int parent]
+  [mask parent]
   (doto (int-array (count parent))
     (masked-point-mutation! mask parent)))
 

@@ -16,7 +16,10 @@ described in the two-point-xo documentation."
 
 (defn two-point-xo
   "Performs standard two point crossover on the given sequences.
-   The resulting child will take its first j elements from first-parent,
+   The resulting child will take its first j elem
+(defn count-ones
+  [bit-string]
+  (apply + bit-string))ents from first-parent,
    elements j<=i<k from the second parent, and elements k<=i from
    the first parent again."
   ([first-parent second-parent]
@@ -92,16 +95,13 @@ described in the two-point-xo documentation."
   [num-individuals fitness-function tournament-size population]
   (vec (map (fn [_] (child population fitness-function tournament-size)) (range num-individuals))))
 
-(defn count-ones
-  [bit-string]
-  (apply + bit-string))
-
-(defn run-ga
+(defn do-run-ga
   [num-gens num-individuals num-bits fitness-function tournament-size]
   (let [initial-pop (make-population num-individuals num-bits fitness-function)]
     (take num-gens (iterate #(next-generation num-individuals fitness-function tournament-size %1) initial-pop))))
 
-(defn do-run-ga
-  []
-  (let [pops (run-ga 100 1000 50 count-ones 2)]
-    (map #(apply max (map :fitness %)) pops)))
+(defn run-ga
+  [num-gens num-individuals num-bits fitness-function tournament-size]
+  (let [pops (do-run-ga num-gens num-individuals num-bits fitness-function tournament-size)]
+    (doseq [p pops]
+      (println (apply max (map :fitness p))))))
